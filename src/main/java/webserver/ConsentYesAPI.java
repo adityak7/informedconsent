@@ -22,12 +22,11 @@ public class ConsentYesAPI {
 		try {
 			response = new JSONObject(respJson);
 			user = response.getString("email");
-			System.out.println(user);
 			
 			status.put("status", "Response recorded correctly!");
 			
-			checkUser(user, policyid);
-			updateConsent(resp, user, policyid);
+			checkUser(Integer.toString(user.hashCode()), policyid);
+			updateConsent(Integer.toString(resp.hashCode()), Integer.toString(user.hashCode()), policyid);
 			return Response.status(200)
 	                .entity(status.toString()).build();
 		} catch (Exception e) {
@@ -111,7 +110,7 @@ public class ConsentYesAPI {
 			
 			respcon = DriverManager.getConnection(sqlurl, "test", "test");
 			
-			String query = "SELECT consent FROM userpolicy WHERE user = \"" + user + "\" AND policyid = " + policyid + ";";
+			String query = "SELECT consent FROM userpolicy WHERE user = \"" + Integer.toString(user.hashCode()) + "\" AND policyid = " + policyid + ";";
 			ps = respcon.prepareStatement(query);
 			rs = ps.executeQuery();
 			
@@ -120,9 +119,9 @@ public class ConsentYesAPI {
 				break;
 			}
 			
-			if (responseString.equals("optin")) {
+			if (responseString.equals(Integer.toString(("optin").hashCode()))) {
 				status.put("response", "You have opted in");
-			} else if (responseString.equals("optout")) {
+			} else if (responseString.equals(Integer.toString(("optout").hashCode()))) {
 				status.put("response", "You have opted out");
 			}
 			return Response.status(200)

@@ -207,7 +207,6 @@ public class policy_db {
 	public static HashMap<Integer, Integer[]> findlogs(DateTime startstamp, DateTime endstamp, String[] cams) {
 		HashMap<Integer, Integer[]> arr = new HashMap<Integer, Integer[]>();
 		ArrayList<Integer> contracts = new ArrayList<Integer>();
-		String sqlurl = "jdbc:mysql://tippersweb.ics.uci.edu:3306/policy_db_test?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
 		Connection logcon = null;
 		PreparedStatement ps,ps2 = null;
 		ResultSet rs,rs2 = null;
@@ -785,10 +784,11 @@ public class policy_db {
 		System.out.println(message.getSid());
 	}
 	
+	private static String sqlurl = "jdbc:mysql://tippersweb.ics.uci.edu:3306/policy_db_test?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
+	
 	// Check if user is in database and add to database accordingly
 	public static boolean checkUser(String emailID, String author, DateTime start, DateTime end) {
 		Connection polyconn = null;
-		String sqlurl = "jdbc:mysql://tippersweb.ics.uci.edu:3306/policy_db_test?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
 		try {
 			polyconn = DriverManager.getConnection(sqlurl, "test", "test");
 			int policyid = 0;
@@ -843,7 +843,6 @@ public class policy_db {
     	// Initializing Server
     	Server.init();
     	
-    	String sqlurl = "jdbc:mysql://tippersweb.ics.uci.edu:3306/policy_db_test?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
     	Connection con = null;
     	PreparedStatement ps = null;
     	ResultSet rs = null;
@@ -907,7 +906,6 @@ public class policy_db {
     	ArrayList<Integer> logs = new ArrayList<Integer>();
     	Set<Integer> contracts = new HashSet<Integer>();
     	Iterator it = logdevs.entrySet().iterator();
-    	String sqlurl = "jdbc:mysql://tippersweb.ics.uci.edu:3306/policy_db_test?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
     	Connection logon = null;
     	String logentry = "";
     	PreparedStatement pst = null;
