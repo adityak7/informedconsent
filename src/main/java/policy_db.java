@@ -73,9 +73,9 @@ public class policy_db {
 			String query12, query13;
 
 			st = polyconn.prepareStatement(query);
-			st.executeUpdate();
+			st.executeUpdate(); // Done for MySQL queries that don't return a result set
 			
-			String query6 = "SELECT policyid FROM policy WHERE author = \"" + author + "\" AND startdatetime = \"" + startstamp.toString("yyyy-MM-dd HH:mm:ss") + "\" AND enddatetime = \"" + endstamp.toString("yyyy-MM-dd HH:mm:ss") + "\";";
+			String query6 = "SELECT policyid FROM policy WHERE author = \"" + author + "\" AND startdatetime = \"" + startstamp.toString("yyyy-MM-dd HH:mm:ss") + "\" AND enddatetime = \"" + endstamp.toString("yyyy-MM-dd HH:mm:ss") + "\";"; // Find policyid from author, start timestamp, and end timestamp
 			PreparedStatement ps7 = polyconn.prepareStatement(query6);
 			rs = ps7.executeQuery();
 			
@@ -146,6 +146,7 @@ public class policy_db {
 		//	System.out.println(fetchObsData(wifid, startstamp, endstamp, threshhold, author, operator));
 		//	System.out.println(wifid);
 
+			// Calculate the number of connections to wifi device and obtain all relevant logs to policy to seal for attestation
 		//	DateTime startnew = singleconn(wifid, startstamp, endstamp, threshhold, wificam, author, operator);
 		//	HashMap<Integer, Integer[]> rellogs = findlogs(startnew, endstamp, wificam.get(wifid));
 		// 	seallogs(rellogs);
@@ -154,15 +155,13 @@ public class policy_db {
 		//	System.out.println(fetchObsDatas(wifidevs, startstamp, endstamp, threshhold2, author, operator));
 		//	System.out.println(Arrays.toString(wifidevs));
 			
+			// Check connections to multiple wifi devices and obtain all relevant logs to polcy to seal for attestation
 		//  startnew = multiconn(wifidevs, startstamp, endstamp, threshhold, wificam, author, operator);
 		//	for (String wifid : wifidevs) {
 	    //      HashMap<Integer, Integer[]> rellogs = findlogs(startnew, endstamp, wificam.get(wifid));
 		//		seallogs(rellogs);
 		//	}
 			
-			//sendEmail("dyrenkova.emiliia@gmail.com", "Policy Update", "SURVEILLANCE POLICY ACTIVE: \n \t We would like to inform you of a policy update in Donald Bren Hall at UC Irvine where cameras " + "" + "are on. \n \t Don't worry and Stay Happy!!!!!");
-
-		//	sendSMS("+19495379867", "+15853120188", "Hello. This is TIPPERS!!");
 	 
 		} catch (SQLException e) {
 			System.out.println("Error! ERROR! Error!\n");
@@ -205,8 +204,9 @@ public class policy_db {
 	
 	// Find all the relevant logs
 	public static HashMap<Integer, Integer[]> findlogs(DateTime startstamp, DateTime endstamp, String[] cams) {
-		HashMap<Integer, Integer[]> arr = new HashMap<Integer, Integer[]>();
-		ArrayList<Integer> contracts = new ArrayList<Integer>();
+		// Variables Declaration
+		HashMap<Integer, Integer[]> arr = new HashMap<Integer, Integer[]>(); // array finally containing the logs that are relevant to the policy at hand
+		ArrayList<Integer> contracts = new ArrayList<Integer>(); // array of contracts related to the logs
 		Connection logcon = null;
 		PreparedStatement ps,ps2 = null;
 		ResultSet rs,rs2 = null;
@@ -214,26 +214,28 @@ public class policy_db {
 		try {
 			logcon = DriverManager.getConnection(sqlurl, "test", "test");
 			
+			// Obtain current system time
 			LocalDateTime current = new LocalDateTime();
+			// Determine all relevant logs up until end time stamp has been reached
 			while (current.toDateTime().isBefore(endstamp) || current.toDateTime().isEqual(endstamp)) {
-				for (String cam : cams) {
-					String query = "SELECT * FROM logging WHERE startstamp >= \"" + startstamp + "\" AND endstamp <= \"" + endstamp + "\" AND deviceid == \"" + cam + "\";";
+				for (String cam : cams) { // Iterate through all camera devices to obtain relevant logs
+					String query = "SELECT * FROM logging WHERE startstamp >= \"" + current.toDateTime() + "\" AND endstamp <= \"" + endstamp + "\" AND deviceid == \"" + cam + "\";"; // Find all logs taken within the time interval of the start timestamp and end timestamp from a valid device
 					ps = logcon.prepareStatement(query);
-					rs = ps.executeQuery();
+					rs = ps.executeQuery(); // Obtain results of logs for aforementioned conditions
 					
 					while (rs.next()) {
-						String query2 = "SELECT policy_id FROM devices_policy WHERE device_id = \"" + rs.getString(4) + "\" ORDER BY policy_id ASC;";
+						String query2 = "SELECT policy_id FROM devices_policy WHERE device_id = \"" + rs.getString(4) + "\" ORDER BY policy_id ASC;"; // Obtain contractid for particular deviceid in linked policy devices table
 						ps2 = logcon.prepareStatement(query2);
 						rs2 = ps2.executeQuery();
 						
 						while (rs2.next()) {
-							contracts.add(rs2.getInt(1));
+							contracts.add(rs2.getInt(1)); // Append contract id to list of policyids
 						}
 						
-						arr.put(rs.getInt(1), contracts.toArray(new Integer[contracts.size()]));
+						arr.put(rs.getInt(1), contracts.toArray(new Integer[contracts.size()])); // Append addition to HashMap to link the logid to all policies that it is associated with
 					}
 				}
-				current = new LocalDateTime();
+				current = new LocalDateTime(); // Recalculate system time
 			}
 			
 			return arr;
@@ -280,8 +282,7 @@ public class policy_db {
 		return startnew.toDateTime();
 	}
 	
-	private static void sendwifis(String[] wifidevs, DateTime dateTime,
-			DateTime end, DateTime start, String author) {
+	private static void sendwifis(String[] wifidevs, DateTime dateTime, DateTime end, DateTime start, String author) { // Function to allow for dynamic checking of users entering the building
 		// TODO Auto-generated method stub
 		try {
 			Client client = Client.create();
@@ -290,7 +291,7 @@ public class policy_db {
 			
 			while (start.isBefore(end) || start.isEqual(end)) {
 				DateTime startstep = start.plusMinutes(5);
-				for (String sensor_id : wifidevs) {
+				for (String sensor_id : wifidevs) { // Obtain new connections through observation get request and send email to corresponding individuals.
 					String url = "http://sensoria.ics.uci.edu:8059" + "/observation/get"+ "?start_timestamp=" + (start.plusSeconds(2)).toString("yyyy-MM-dd HH:mm:ss") + "&end_timestamp=" + startstep.toString("yyyy-MM-dd HH:mm:ss") + "&sensor_id="+ sensor_id;
 					WebResource webResource = client.resource(url.replaceAll(" ", "%20"));
 					ClientResponse response = webResource.accept("application/json").get(ClientResponse.class);
@@ -299,11 +300,11 @@ public class policy_db {
 					obsList = new JSONArray(serverOutput);
 
 					if (obsList.length() > 0) {
-						for(int i = 0; i < obsList.length(); i++){
+						for(int i = 0; i < obsList.length(); i++){ // Iterate through observation list to obtain the client_id to send emails
 							JSONObject obsObject = (JSONObject) obsList.get(i);
-							JSONObject payloadObj = obsObject.getJSONObject("payload");
-							String clientid = payloadObj.getString("client_id");
-							int owners = fetchSensorData(clientid, start, end);
+							JSONObject payloadObj = obsObject.getJSONObject("payload"); // Obtian payload array
+							String clientid = payloadObj.getString("client_id"); // Obtain client_id from the payload array
+							int owners = fetchSensorData(clientid, start, end); // Obtain the owner numbers associated with the clientids
 							ownarr.add(owners);
 						}
 					}
@@ -459,37 +460,37 @@ public class policy_db {
 			Set<Integer> ownarr = new HashSet<Integer>();
 			DateTime starty = start;
 			
-			while (start.isBefore(end) || start.isEqual(end)) {
+			while (start.isBefore(end) || start.isEqual(end)) { // Continue checking at most until end timestamp for policy
 				DateTime startstep = start.plusMinutes(5);
-				String url = "http://sensoria.ics.uci.edu:8059" + "/observation/get"+ "?start_timestamp=" + (start.plusSeconds(2)).toString("yyyy-MM-dd HH:mm:ss") + "&end_timestamp=" + startstep.toString("yyyy-MM-dd HH:mm:ss") + "&sensor_id="+ sensor_id;
+				String url = "http://sensoria.ics.uci.edu:8059" + "/observation/get"+ "?start_timestamp=" + (start.plusSeconds(2)).toString("yyyy-MM-dd HH:mm:ss") + "&end_timestamp=" + startstep.toString("yyyy-MM-dd HH:mm:ss") + "&sensor_id="+ sensor_id; // Use the observation get API call for client_ids email and to be able to find number of connections
 				WebResource webResource = client.resource(url.replaceAll(" ", "%20"));
 				ClientResponse response = webResource.accept("application/json").get(ClientResponse.class);
 				JSONArray obsList = null;
 				serverOutput = response.getEntity(String.class);
 				obsList = new JSONArray(serverOutput);
 
-				if (obsList.length() > 0) {
+				if (obsList.length() > 0) { // Check for connections if observations list is greater than 0, or that there is at least 1 connection
 					for(int i = 0; i < obsList.length(); i++){
-						JSONObject obsObject = (JSONObject) obsList.get(i);
-						JSONObject payloadObj = obsObject.getJSONObject("payload");
-						String clientid = payloadObj.getString("client_id");
+						JSONObject obsObject = (JSONObject) obsList.get(i); // Object representing client
+						JSONObject payloadObj = obsObject.getJSONObject("payload"); // Obtain payoad
+						String clientid = payloadObj.getString("client_id"); // Obtain the clientid to send email
 						int owners = fetchSensorData(clientid, start, end);
 						ownarr.add(owners);
-						connect += ownarr.size() - connect;
+						connect += ownarr.size() - connect; // find the sum of connceions
 						switch (operator) {
 						case ">": if (connect > threshhold) {
 							System.out.println(connect);
 						/*  for (int own : ownarr) {
-								String email = fetchUserData(own);
+								String email = fetchUserData(own); // Get eamil from the user's owner number 
 								if (!email.isEmpty()) {
-									initiateServer(email, author, starty, end);
+									initiateServer(email, author, starty, end); // Send email that the user is back
 								}
 							}    */
 							return true;
 						}
 						break;
 						case "<": if (connect < threshhold) {
-							System.out.println(connect);
+							System.out.println(connect);// Get eamil from the user's owner number 
 						/*	for (int own : ownarr) {
 								String email = fetchUserData(own);
 								if (!email.isEmpty()) {
@@ -578,7 +579,7 @@ public class policy_db {
 	// Get the user's email address from their owner number
 	public static String fetchUserData(int ownerid) {
 		try {
-			Client client = Client.create();
+			Client client = Client.create(); // Obtain user owner number from the client 
 			String url = "http://sensoria.ics.uci.edu:8059" + "/user/get" + "?semantic_entity_id=" + ownerid;
 			WebResource webResource = client.resource(url.replaceAll(" ", "%20"));
 			ClientResponse response = webResource.accept("application/json").get(ClientResponse.class);
@@ -586,10 +587,10 @@ public class policy_db {
 			String serverOutput = response.getEntity(String.class);
 			userList = new JSONArray(serverOutput);
 
-			JSONObject userobj = (JSONObject) (userList.get(0));
+			JSONObject userobj = (JSONObject) (userList.get(0)); // Obtain user's owner number after they have provided clientid
 			if(userobj.has("email")) {
 				System.out.println(userobj.getString("email"));
-				return userobj.getString("email");
+				return userobj.getString("email"); // return the email address for attestation log sealing.
 			}
 
 		} catch (JSONException e) {
@@ -605,28 +606,29 @@ public class policy_db {
 	public static boolean fetchObsDatas(String[] sensors, DateTime start, DateTime end, int threshhold, String author, String operator) {
 		try {
 			Client client = Client.create();
-			int connect = 0;
+			int connect = 0; // Connections made 0
 			Set<Integer> ownarr = new HashSet<Integer>();
 			DateTime starty = start;
-
+			
+			// Send email to everyone who is connected to the wifi devices listed in sensors
 			while (start.isBefore(end) || start.isEqual(end)) {
 				DateTime startstep = start.plusMinutes(5);
 				for (String sensor_id : sensors) {
 					String url = "http://sensoria.ics.uci.edu:8059" + "/observation/get"+ "?start_timestamp=" + start.toString("yyyy-MM-dd HH:mm:ss") + "&end_timestamp=" + startstep.toString("yyyy-MM-dd HH:mm:ss") + "&sensor_id="+ sensor_id;
-					WebResource webResource = client.resource(url.replaceAll(" ", "%20"));
-					ClientResponse response = webResource.accept("application/json").get(ClientResponse.class);
+					WebResource webResource = client.resource(url.replaceAll(" ", "%20")); // Do API call
+					ClientResponse response = webResource.accept("application/json").get(ClientResponse.class); // Obtain response from Java API call for TIPPERS server
 					JSONArray obsList = null;
 					String serverOutput = response.getEntity(String.class);
 					obsList = new JSONArray(serverOutput);
 
 					if (obsList.length() > 0) {
 						for(int i = 0; i < obsList.length(); i++){
-							JSONObject obsObject = (JSONObject) obsList.get(i);
-							JSONObject payloadObj = obsObject.getJSONObject("payload");
-							String clientid = payloadObj.getString("client_id");
+							JSONObject obsObject = (JSONObject) obsList.get(i); // parse object to get payload
+							JSONObject payloadObj = obsObject.getJSONObject("payload"); // Obtain payload from JSON Object
+							String clientid = payloadObj.getString("client_id"); // Obtain client-id from the payload object
 							int owners = fetchSensorData(clientid, start, end);
-							ownarr.add(owners);
-							connect += ownarr.size() - connect;
+							ownarr.add(owners); // Add distinct owner numbers to this set
+							connect += ownarr.size() - connect; // Find number of connections between the time range
 							switch (operator) {
 							case ">": if (connect > threshhold) {
 								System.out.println(connect);
@@ -706,11 +708,12 @@ public class policy_db {
 			Client client = Client.create();
 			
 			JSONObject emailObj = new JSONObject();
-			emailObj.put("subject", emailSubject);
+			// Determine what parameters are needed for this weeked.
+			emailObj.put("subject", emailSubject); 
 			emailObj.put("message", emailContent);
 			emailObj.put("recipient", emailID);
 			
-			String url = "http://sensoria.ics.uci.edu:8059/message/send";
+			String url = "http://sensoria.ics.uci.edu:8059/message/send"; // Call JAVA API call to send email message
 			WebResource webResource = client.resource(url.replaceAll(" ", "%20"));
 			ClientResponse response = webResource.type("application/json").post(ClientResponse.class, emailObj.toString());
 			JSONArray userList = null;
@@ -747,8 +750,8 @@ public class policy_db {
 				if (obsList.length() > 0) {
 					for(int i = 0; i < obsList.length(); i++){
 						JSONObject obsObject = (JSONObject) obsList.get(i);
-						JSONObject payloadObj = obsObject.getJSONObject("payload");
-						String clientid = payloadObj.getString("client_id");
+						JSONObject payloadObj = obsObject.getJSONObject("payload"); // Obtain payload array from JSON object
+						String clientid = payloadObj.getString("client_id"); // Obtain clientid from payload.
 						int owners = fetchSensorData(clientid, start, end);
 						ownarr.add(owners);
 					}
@@ -826,7 +829,7 @@ public class policy_db {
    	public static HttpServer startServer() {
         // create a resource config that scans for JAX-RS resources and providers
         // in edu.uci.ics.tippers.requestscheduler package
-        final ResourceConfig rc = new ResourceConfig(/*ConsentYesAPI.class*/).packages("webserver");
+        final ResourceConfig rc = new ResourceConfig(/*ConsentYesAPI.class*/).packages("webserver"); // Start server by responding to the total number of rest apis arround with the ln
         rc.register(CrossDomainFilter.class);
         rc.register(CORSResponseFilter.class);
        	return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
